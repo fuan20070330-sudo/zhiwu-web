@@ -485,11 +485,11 @@ function authSubmit() {
       done();
       if (sess) { toast('注册成功，已自动登录'); afterLogin(); }
       else { toast('注册成功，请查收验证邮件后登录'); closeModal(); }
-    }).catch(function (e) { done(); toast('注册失败：' + (e && e.message)); });
+    }).catch(function (e) { done(); toast(friendlyErr('注册失败：', e)); });
   } else {
     Cloud.signIn(email, pass).then(function () {
       done(); toast('登录成功'); afterLogin();
-    }).catch(function (e) { done(); toast('登录失败：' + (e && e.message)); });
+    }).catch(function (e) { done(); toast(friendlyErr('登录失败：', e)); });
   }
 }
 function afterLogin() { closeModal(); render(); cloudSyncNow(true); }
@@ -519,3 +519,16 @@ function cloudAuto() {
   }
 }
 
+
+
+/* 把常见云端错误翻译成友好中文提示 */
+function friendlyErr(prefix, e) {
+  var msg = (e && e.message) || '';
+  var low = String(msg).toLowerCase();
+  if (low.indexOf('rate limit') >= 0) return prefix + '注册太频繁：请约 1 小时后再试，或换个邮箱注册';
+  if (low.indexOf('not confirmed') >= 0) return prefix + '该邮箱尚未确认：请到邮箱点确认链接，或到 Supabase 关闭邮箱验证';
+  if (low.indexOf('invalid login credentials') >= 0 || low.indexOf('invalid credentials') >= 0) return prefix + '邮箱或密码不正确';
+  if (low.indexOf('user already registered') >= 0) return prefix + '该邮箱已注册，请直接登录';
+  if (low.indexOf('failed to fetch') >= 0 || low.indexOf('network') >= 0 || low.indexOf('fetch') >= 0) return prefix + '网络异常：请确认能访问 supabase.co 后重试';
+  return prefix + (msg || '未知错误');
+}
