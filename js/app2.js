@@ -140,7 +140,8 @@ function saveManualDiet() {
 function renderProfile() {
   var p = DB.profile;
   var s = DB.settings;
-  var html = '<div class="card"><h3>🧑‍⚕️ 健康档案</h3>';
+  var html = accountCardHTML();
+  html += '<div class="card"><h3>🧑‍⚕️ 健康档案</h3>';
   html += '<div class="form-grid">';
   html += '<div class="field"><label>性别</label><select id="p_gender" onchange="saveProfile()">';
   html += '<option value="男"' + (p.gender === '男' ? ' selected' : '') + '>男</option>';
@@ -216,7 +217,7 @@ function exportData() {
 }
 function resetDemo() {
   if (!window.confirm('确定重置为演示数据？当前数据将丢失。')) return;
-  DB = MOCK.seed(); saveDB(); render(); toast('已重置演示数据');
+  DB = MOCK.seed(); markSynced(nowUTC()); render(); toast('已重置演示数据');
 }
 
 /* ---------- 拍照识别流程 ---------- */
@@ -428,4 +429,93 @@ function saveDietConfirm() {
 window.addEventListener('hashchange', render);
 if (!location.hash) history.replaceState(null, '', '#home');
 render();
+cloudAuto();
+
+
+
+/* =========================================================
+   第 3 部分：账号与云同步（依赖 js/cloud.js）
+   ========================================================= */
+function accountCardHTML() {
+  var cfgReady = (typeof Cloud !== 'undefined') && Cloud.isReady();
+  var logged = cfgReady && Cloud.isLoggedIn();
+  var h = '<div class="card"><h3>👤 账号与云同步</h3>';
+  if (!cfgReady) {
+    h += '<div class="muted" style="margin-bottom:10px">云端尚未配置：账号与多端同步未启用。请在 <b>web/config.js</b> 填入 Supabase 的 URL 与 anon key（步骤见 docs/09）。</div>';
+    h += '<div class="actions"><button class="btn btn-sm btn-ghost" onclick="toast(\'请先填写 web/config.js\')">配置说明</button></div>';
+  } else if (!logged) {
+    h += '<div class="muted" style="margin-bottom:10px">登录后，数据将自动备份到云端，并可在多台设备间同步；本地仍可离线使用。</div>';
+    h += '<button class="btn btn-primary btn-block" onclick="openAuthModal()">🔐 登录 / 注册</button>';
+  } else {
+    h += '<div class="about-line"><b>状态：</b>✅ 已登录</div>';
+    h += '<div class="about-line"><b>账号：</b>' + esc(Cloud.currentEmail()) + '</div>';
+    h += '<div class="about-line"><b>同步：</b>本地改动后自动上传 · 支持手动“立即同步”</div>';
+    h += '<div class="actions">';
+    h += '<button class="btn btn-sm btn-primary" onclick="cloudSyncNow(true)">🔄 立即同步</button>';
+    h += '<button class="btn btn-sm btn-ghost" onclick="cloudLogout()">退出登录</button>';
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function openAuthModal() {
+  if (typeof Cloud === 'undefined' || !Cloud.isReady()) { toast('请先配置 web/config.js 中的 Supabase 信息'); return; }
+  var html = modalHead('🔐 登录 / 注册');
+  html += '<div class="field"><label>邮箱</label><input id="au_email" type="email" placeholder="you@example.com" /></div>';
+  html += '<div class="field"><label>密码（至少 6 位）</label><input id="au_pass" type="password" placeholder="••••••••" /></div>';
+  html += '<div class="field"><label>操作</label><select id="au_mode"><option value="login">登录</option><option value="signup">注册新账号</option></select></div>';
+  html += '<div class="muted" style="margin-bottom:10px">数据按账号隔离存储，仅本人可见（数据库行级安全 RLS）。注册后若提示需确认邮箱，请先在邮箱点击确认，或在 Supabase 后台关闭 Email confirm。</div>';
+  html += '<button class="btn btn-primary btn-block" onclick="authSubmit()">提交</button>';
+  openModal(html, true);
+}
+function authSubmit() {
+  var email = ($('#au_email').value || '').trim();
+  var pass = $('#au_pass').value || '';
+  var mode = $('#au_mode').value;
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast('邮箱格式不正确'); return; }
+  if (pass.length < 6) { toast('密码至少 6 位'); return; }
+  var btn = document.querySelector('#modal-root .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '请稍候…'; }
+  function done() { if (btn) { btn.disabled = false; btn.textContent = '提交'; } }
+  if (mode === 'signup') {
+    Cloud.signUp(email, pass).then(function () {
+      return Cloud.signIn(email, pass).catch(function () { return null; });
+    }).then(function (sess) {
+      done();
+      if (sess) { toast('注册成功，已自动登录'); afterLogin(); }
+      else { toast('注册成功，请查收验证邮件后登录'); closeModal(); }
+    }).catch(function (e) { done(); toast('注册失败：' + (e && e.message)); });
+  } else {
+    Cloud.signIn(email, pass).then(function () {
+      done(); toast('登录成功'); afterLogin();
+    }).catch(function (e) { done(); toast('登录失败：' + (e && e.message)); });
+  }
+}
+function afterLogin() { closeModal(); render(); cloudSyncNow(true); }
+function cloudSyncNow(showToast) {
+  if (typeof Cloud === 'undefined' || !Cloud.isReady()) { toast('云端未配置'); return; }
+  if (!Cloud.isLoggedIn()) { toast('请先登录'); return; }
+  if (showToast) toast('同步中…');
+  Cloud.syncNow(true).then(function (res) {
+    if (!res.ok) {
+      if (res.reason === 'noauth') toast('登录已失效，请重新登录');
+      else if (res.reason === 'noconfig') toast('云端未配置');
+      return;
+    }
+    render();
+    var map = { uploaded: '已上传到云端', downloaded: '已从云端拉取最新数据', insync: '数据已是最新' };
+    toast(map[res.action] || '同步完成');
+  }).catch(function (e) { toast('同步失败：' + (e && e.message)); });
+}
+function cloudLogout() {
+  if (typeof Cloud === 'undefined') return;
+  Cloud.signOut().then(function () { toast('已退出登录（本地数据保留）'); render(); });
+}
+/* 页面启动时：若已登录则静默拉取一次云端（不打扰） */
+function cloudAuto() {
+  if (typeof Cloud !== 'undefined' && Cloud.isReady && Cloud.isLoggedIn()) {
+    Cloud.syncNow(true).catch(function () { /* 静默 */ });
+  }
+}
 

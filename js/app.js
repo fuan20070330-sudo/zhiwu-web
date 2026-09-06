@@ -34,19 +34,64 @@ function fallbackIcon(item) {
 }
 
 /* ---------- 数据存储 ---------- */
+var applyingRemote = false;
+function deviceId() {
+  try {
+    var k = 'zhiwu_device';
+    var v = localStorage.getItem(k);
+    if (!v) { v = 'dev-' + Math.random().toString(36).slice(2, 10); localStorage.setItem(k, v); }
+    return v;
+  } catch (e) { return 'dev-anon'; }
+}
+function nowUTC() { return new Date().toISOString(); }
+function ensureMeta() {
+  if (!DB.meta) DB.meta = {};
+  if (!DB.meta.deviceId) DB.meta.deviceId = deviceId();
+  if (!DB.meta.updatedAt) DB.meta.updatedAt = nowUTC();
+  if (DB.meta.dirty === undefined) DB.meta.dirty = false;
+}
 function loadDB() {
   try {
     var raw = localStorage.getItem(KEY);
     if (raw) {
       var d = JSON.parse(raw);
-      if (d && d.items && d.dietLog) return d;
+      if (d && d.items && d.dietLog) { if (!d.meta) d.meta = {}; return d; }
     }
   } catch (e) { /* file:// 下可能不可用，退回内存 */ }
-  return MOCK.seed();
+  var s = MOCK.seed();
+  if (!s.meta) s.meta = {};
+  s.meta.deviceId = deviceId();
+  s.meta.updatedAt = nowUTC();
+  s.meta.dirty = false;
+  return s;
 }
-function saveDB() {
+function saveDB(skipRemote) {
+  ensureMeta();
+  if (!applyingRemote) { DB.meta.updatedAt = nowUTC(); DB.meta.dirty = true; }
   try { localStorage.setItem(KEY, JSON.stringify(DB)); }
   catch (e) { /* 忽略配额/隐私模式错误 */ }
+  if (!skipRemote && !applyingRemote && typeof Cloud !== 'undefined' && Cloud.isReady && Cloud.isReady() && Cloud.isLoggedIn()) {
+    Cloud.scheduleSync();
+  }
+}
+/* 云同步成功后：记录服务端时间，标记为已同步（不再触发上传） */
+function markSynced(serverTime) {
+  applyingRemote = true;
+  ensureMeta();
+  DB.meta.updatedAt = serverTime || nowUTC();
+  DB.meta.dirty = false;
+  saveDB(true);
+  applyingRemote = false;
+}
+/* 拉取云端快照并应用到本地 */
+function applyRemoteSnapshot(snap) {
+  applyingRemote = true;
+  DB = snap;
+  ensureMeta();
+  DB.meta.dirty = false;
+  saveDB(true);
+  applyingRemote = false;
+  render();
 }
 
 /* ---------- 数据辅助 ---------- */
@@ -458,4 +503,5 @@ function openItemDetail(id) {
   hid.type = 'hidden'; hid.id = 'f_id'; hid.value = it.id;
   $('#modal-root .modal').appendChild(hid);
 }
+
 

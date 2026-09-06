@@ -47,3 +47,8 @@ web/
 1. 本目录为纯静态站点，可部署到 GitHub Pages / Vercel / Netlify；
 2. 详细步骤、国内方案与自定义域名见根目录 `docs/08_网站部署与上线指南.md`；
 3. 已内置 PWA 配置（manifest.webmanifest + icon.svg），部署后可“添加到主屏幕”。
+
+## 账号与云同步（正式产品功能）
+- 代码已内置：`config.js`（Supabase 配置）、`js/cloud.js`（同步引擎）、“我的 → 账号与云同步”UI；
+- 填写 `config.js` 后即启用“账号登录 + 云端备份 + 多端同步”；开通步骤与建表 SQL 见根目录 `docs/09_账号与云同步实施说明.md`；
+- 未配置时不影响本地使用（自动提示“云端未配置”）。
