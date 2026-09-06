@@ -7,6 +7,7 @@
    （anon key 用于客户端公开访问，安全由数据库行级策略 RLS 保护）
    ========================================================= */
 window.APP_CONFIG = {
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: ''
+  SUPABASE_URL: 'https://ncjbczhjfitphqzxwozj.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_zCIELwLQ4-eXyBUk8dqkcQ_wx-RoQUS'
 };
+
