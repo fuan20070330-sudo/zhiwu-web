@@ -1,0 +1,14 @@
+{
+  "name": "智物精管 —— 一站式生活数字化助手",
+  "short_name": "智物精管",
+  "description": "拍照识别物品、保质期与热量，一站式生活物品与健康管理。",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f6fb",
+  "theme_color": "#0d9488",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="智物精管——基于多模态视觉识别的一站式生活数字化助手（网页演示原型）" />
+  <title>智物精管 · 一站式生活数字化助手</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A6%3C/text%3E%3C/svg%3E" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0d9488" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="智物精管" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- 顶栏 -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-logo">📦</span>
+        <div class="brand-text">
+          <h1>智物精管</h1>
+          <p>看得见 · 管得住 · 算得清</p>
+        </div>
+      </div>
+      <span class="demo-chip" title="当前为本地演示数据，未调用真实视觉 API">演示模式</span>
+    </div>
+  </header>
+
+  <!-- 主视图容器 -->
+  <main id="view" class="view"></main>
+
+  <!-- 底部导航 -->
+  <nav class="mainnav" id="mainnav">
+    <button class="nav-item" data-view="home" onclick="go('home')"><span>🏠</span>首页</button>
+    <button class="nav-item" data-view="items" onclick="go('items')"><span>📦</span>物品库</button>
+    <button class="nav-item" data-view="expiry" onclick="go('expiry')"><span>⏰</span>保质期</button>
+    <button class="nav-item" data-view="diet" onclick="go('diet')"><span>🍱</span>饮食</button>
+    <button class="nav-item" data-view="profile" onclick="go('profile')"><span>👤</span>我的</button>
+  </nav>
+
+  <!-- 模态层 -->
+  <div id="modal-root"></div>
+
+  <!-- 隐藏文件选择（拍照/相册） -->
+  <input type="file" id="fileInput" accept="image/*" hidden />
+
+  <script src="js/mock.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/app2.js"></script>
+</body>
+</html>
+
